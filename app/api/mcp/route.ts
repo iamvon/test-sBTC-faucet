@@ -15,44 +15,35 @@ function applyCorsHeaders(response: Response) {
   return response;
 }
 
+function logRequest(request: Request) {
+  console.log("[mcp] request", {
+    method: request.method,
+    url: request.url,
+    accept: request.headers.get("accept"),
+    contentType: request.headers.get("content-type"),
+    mcpProtocolVersion: request.headers.get("mcp-protocol-version"),
+    mcpSessionId: request.headers.get("mcp-session-id"),
+    lastEventId: request.headers.get("last-event-id"),
+    userAgent: request.headers.get("user-agent"),
+  });
+}
+
 async function handleMcpRequest(request: Request) {
+  logRequest(request);
+
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
-    enableJsonResponse: true,
   });
   const server = createFaucetMcpServer();
 
   await server.connect(transport);
 
-  try {
-    const response = await transport.handleRequest(request);
-    return applyCorsHeaders(response);
-  } finally {
-    await transport.close();
-    await server.close();
-  }
+  const response = await transport.handleRequest(request);
+  return applyCorsHeaders(response);
 }
 
 export async function GET(request: Request) {
-  return applyCorsHeaders(
-    new Response(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed. Use POST for MCP requests.",
-        },
-        id: null,
-      }),
-      {
-        status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          Allow: "POST, OPTIONS",
-        },
-      }
-    )
-  );
+  return handleMcpRequest(request);
 }
 
 export async function POST(request: Request) {
@@ -60,25 +51,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  return applyCorsHeaders(
-    new Response(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed. Use POST for MCP requests.",
-        },
-        id: null,
-      }),
-      {
-        status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          Allow: "POST, OPTIONS",
-        },
-      }
-    )
-  );
+  return handleMcpRequest(request);
 }
 
 export async function OPTIONS() {
