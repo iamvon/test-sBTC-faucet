@@ -1,7 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type express from "express";
+import { randomUUID } from "node:crypto";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import {
   broadcastFaucetMint,
@@ -31,6 +34,8 @@ const faucetClaimSchema = {
 const app = createMcpExpressApp({
   host: "0.0.0.0",
 });
+
+const transports: Record<string, StreamableHTTPServerTransport | SSEServerTransport> = {};
 
 async function getFaucetConfig() {
   const senderAddress = await getSenderAddress();
@@ -212,23 +217,48 @@ async function handleMcp(req: express.Request, res: express.Response) {
     lastEventId: req.headers["last-event-id"],
   });
 
-  const server = createServer();
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-  });
-
   try {
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
+    const sessionIdHeader = req.headers["mcp-session-id"];
+    const sessionId = Array.isArray(sessionIdHeader) ? sessionIdHeader[0] : sessionIdHeader;
 
-    res.on("close", () => {
-      void transport.close().catch(error => {
-        console.error("[express-mcp] failed to close transport", error);
+    let transport: StreamableHTTPServerTransport;
+
+    if (sessionId && transports[sessionId] instanceof StreamableHTTPServerTransport) {
+      transport = transports[sessionId] as StreamableHTTPServerTransport;
+    } else if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: generatedSessionId => {
+          transports[generatedSessionId] = transport;
+        },
+        onsessionclosed: closedSessionId => {
+          delete transports[closedSessionId];
+        },
       });
-      void server.close().catch(error => {
-        console.error("[express-mcp] failed to close server", error);
+      const server = createServer();
+      await server.connect(transport);
+      transport.onclose = () => {
+        const currentId = transport.sessionId;
+        if (currentId) {
+          delete transports[currentId];
+        }
+        void server.close().catch(error => {
+          console.error("[express-mcp] failed to close server", error);
+        });
+      };
+    } else {
+      res.status(400).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Bad Request: No valid session ID provided",
+        },
+        id: null,
       });
-    });
+      return;
+    }
+
+    await transport.handleRequest(req, res, req.body);
   } catch (error) {
     console.error("[express-mcp] handler error", error);
     if (!res.headersSent) {
@@ -244,9 +274,64 @@ async function handleMcp(req: express.Request, res: express.Response) {
   }
 }
 
+app.get("/api/mcp", async (req, res) => {
+  console.log("[express-mcp] legacy sse request", {
+    method: req.method,
+    url: req.originalUrl,
+    accept: req.headers.accept,
+  });
+
+  try {
+    const transport = new SSEServerTransport("/api/mcp/messages", res);
+    transports[transport.sessionId] = transport;
+
+    res.on("close", () => {
+      delete transports[transport.sessionId];
+    });
+
+    const server = createServer();
+    await server.connect(transport);
+  } catch (error) {
+    console.error("[express-mcp] legacy sse error", error);
+    if (!res.headersSent) {
+      res.status(500).send(error instanceof Error ? error.message : "Internal server error");
+    }
+  }
+});
+
 app.post("/api/mcp", handleMcp);
-app.get("/api/mcp", handleMcp);
 app.delete("/api/mcp", handleMcp);
+
+app.post("/api/mcp/messages", async (req, res) => {
+  const sessionIdValue = req.query.sessionId;
+  const sessionId = Array.isArray(sessionIdValue) ? sessionIdValue[0] : sessionIdValue;
+
+  console.log("[express-mcp] legacy message request", {
+    method: req.method,
+    url: req.originalUrl,
+    sessionId,
+  });
+
+  if (!sessionId) {
+    res.status(400).send("Missing sessionId");
+    return;
+  }
+
+  const transport = transports[sessionId];
+  if (!(transport instanceof SSEServerTransport)) {
+    res.status(400).send("No SSE transport found for sessionId");
+    return;
+  }
+
+  try {
+    await transport.handlePostMessage(req, res, req.body);
+  } catch (error) {
+    console.error("[express-mcp] legacy message error", error);
+    if (!res.headersSent) {
+      res.status(500).send(error instanceof Error ? error.message : "Internal server error");
+    }
+  }
+});
 
 app.options("/api/mcp", (_req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -256,6 +341,13 @@ app.options("/api/mcp", (_req, res) => {
     "Content-Type, Last-Event-ID, mcp-protocol-version, mcp-session-id"
   );
   res.setHeader("Access-Control-Expose-Headers", "mcp-protocol-version, mcp-session-id");
+  res.status(204).end();
+});
+
+app.options("/api/mcp/messages", (_req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.status(204).end();
 });
 
