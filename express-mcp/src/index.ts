@@ -2,7 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type express from "express";
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   broadcastFaucetMint,
@@ -32,13 +31,6 @@ const faucetClaimSchema = {
 const app = createMcpExpressApp({
   host: "0.0.0.0",
 });
-
-type SessionEntry = {
-  server: McpServer;
-  transport: StreamableHTTPServerTransport;
-};
-
-const sessions = new Map<string, SessionEntry>();
 
 async function getFaucetConfig() {
   const senderAddress = await getSenderAddress();
@@ -209,6 +201,12 @@ function createServer() {
   return server;
 }
 
+const sharedServer = createServer();
+const sharedTransport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined,
+});
+let sharedServerConnected = false;
+
 async function handleMcp(req: express.Request, res: express.Response) {
   console.log("[express-mcp] request", {
     method: req.method,
@@ -220,42 +218,13 @@ async function handleMcp(req: express.Request, res: express.Response) {
     lastEventId: req.headers["last-event-id"],
   });
 
-  const requestedSessionId = req.headers["mcp-session-id"];
-  const sessionId = Array.isArray(requestedSessionId) ? requestedSessionId[0] : requestedSessionId;
-  let entry = sessionId ? sessions.get(sessionId) : undefined;
-
-  if (!entry) {
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: generatedSessionId => {
-        sessions.set(generatedSessionId, {
-          server,
-          transport,
-        });
-      },
-      onsessionclosed: closedSessionId => {
-        const existing = sessions.get(closedSessionId);
-        if (existing) {
-          sessions.delete(closedSessionId);
-          void existing.server.close().catch(error => {
-            console.error("[express-mcp] failed to close server", error);
-          });
-          void existing.transport.close().catch(error => {
-            console.error("[express-mcp] failed to close transport", error);
-          });
-        }
-      },
-    });
-    const server = createServer();
-    entry = { server, transport };
-  }
-
   try {
-    if (!entry.server.isConnected()) {
-      await entry.server.connect(entry.transport);
+    if (!sharedServerConnected) {
+      await sharedServer.connect(sharedTransport);
+      sharedServerConnected = true;
     }
 
-    await entry.transport.handleRequest(req, res, req.body);
+    await sharedTransport.handleRequest(req, res, req.body);
   } catch (error) {
     console.error("[express-mcp] handler error", error);
     if (!res.headersSent) {
