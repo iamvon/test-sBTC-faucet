@@ -18,6 +18,7 @@ function applyCorsHeaders(response: Response) {
 async function handleMcpRequest(request: Request) {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
+    enableJsonResponse: true,
   });
   const server = createFaucetMcpServer();
 
@@ -33,7 +34,25 @@ async function handleMcpRequest(request: Request) {
 }
 
 export async function GET(request: Request) {
-  return handleMcpRequest(request);
+  return applyCorsHeaders(
+    new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Method not allowed. Use POST for MCP requests.",
+        },
+        id: null,
+      }),
+      {
+        status: 405,
+        headers: {
+          "Content-Type": "application/json",
+          Allow: "POST, OPTIONS",
+        },
+      }
+    )
+  );
 }
 
 export async function POST(request: Request) {
@@ -41,7 +60,25 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  return handleMcpRequest(request);
+  return applyCorsHeaders(
+    new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Method not allowed. Use POST for MCP requests.",
+        },
+        id: null,
+      }),
+      {
+        status: 405,
+        headers: {
+          "Content-Type": "application/json",
+          Allow: "POST, OPTIONS",
+        },
+      }
+    )
+  );
 }
 
 export async function OPTIONS() {
