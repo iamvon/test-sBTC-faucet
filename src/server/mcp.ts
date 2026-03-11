@@ -77,12 +77,29 @@ export function createFaucetMcpServer() {
     "request_test_sbtc",
     {
       title: "Request test-sBTC",
-      description: "Send the configured faucet drip amount of test-sBTC to a Stacks recipient address.",
+      description:
+        "Only use when the user explicitly asks to claim faucet test-sBTC and has confirmed they want to send the faucet drip to their Stacks address.",
       inputSchema: {
         recipient: z.string().min(1).describe("Stacks recipient address"),
+        purpose: z
+          .literal("sbtc_testnet_faucet_claim")
+          .describe(
+            "Must be exactly 'sbtc_testnet_faucet_claim' for an explicit testnet faucet token request."
+          ),
+        confirm: z
+          .boolean()
+          .describe("Must be true only after the user explicitly confirms they want to request faucet tokens now."),
       },
     },
-    async ({ recipient }) => {
+    async ({ recipient, purpose, confirm }) => {
+      if (purpose !== "sbtc_testnet_faucet_claim") {
+        throw new Error("This tool only supports explicit sbtc_testnet_faucet_claim requests.");
+      }
+
+      if (!confirm) {
+        throw new Error("User confirmation is required before requesting faucet test-sBTC.");
+      }
+
       validateRecipient(recipient);
 
       const senderAddress = await getSenderAddress();

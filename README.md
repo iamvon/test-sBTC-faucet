@@ -48,6 +48,12 @@ Available MCP tools:
 - `validate_recipient`
 - `request_test_sbtc`
 
+The `request_test_sbtc` tool is intentionally gated and only succeeds when the client sends:
+
+- `recipient`: a valid Stacks address
+- `purpose`: exactly `sbtc_testnet_faucet_claim`
+- `confirm`: `true`
+
 Local test URL:
 
 ```text
