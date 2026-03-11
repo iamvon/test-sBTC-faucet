@@ -17,6 +17,17 @@ import {
   validateRecipient,
 } from "../../src/server/faucet.js";
 
+const validateRecipientSchema = {
+  recipient: z.string().min(1).describe("Stacks recipient address"),
+} as Record<string, z.ZodTypeAny>;
+
+const faucetClaimSchema = {
+  recipient: z.string().min(1).describe("Stacks recipient address"),
+  confirm: z
+    .boolean()
+    .describe("Must be true only after the user explicitly confirms they want to get free test-sBTC now."),
+} as Record<string, z.ZodTypeAny>;
+
 const app = createMcpExpressApp({
   host: "0.0.0.0",
 });
@@ -125,10 +136,8 @@ function createServer() {
 
   server.tool(
     "validate_recipient",
-    {
-      recipient: z.string().min(1).describe("Stacks recipient address"),
-    },
-    async ({ recipient }) => {
+    validateRecipientSchema,
+    async ({ recipient }: { recipient: string }) => {
       try {
         validateRecipient(recipient);
         return {
@@ -150,13 +159,8 @@ function createServer() {
 
   server.tool(
     "get_testnet_sbtc_faucet",
-    {
-      recipient: z.string().min(1).describe("Stacks recipient address"),
-      confirm: z
-        .boolean()
-        .describe("Must be true only after the user explicitly confirms they want to get free test-sBTC now."),
-    },
-    async ({ recipient, confirm }) => {
+    faucetClaimSchema,
+    async ({ recipient, confirm }: { recipient: string; confirm: boolean }) => {
       if (!confirm) {
         return {
           content: [
