@@ -166,7 +166,7 @@ function createServer() {
           content: [
             {
               type: "text",
-              text: "User confirmation is required before requesting faucet test-sBTC.",
+              text: "User confirmation is required before requesting faucet test-sBTC.", 
             },
           ],
           isError: true,
