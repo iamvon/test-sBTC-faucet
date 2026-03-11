@@ -137,7 +137,7 @@
   resolved "https://registry.yarnpkg.com/@hono/node-server/-/node-server-1.19.11.tgz#dc419f0826dd2504e9fc86ad289d5636a0444e2f"
   integrity sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g==
 
-"@modelcontextprotocol/sdk@^1.10.2", "@modelcontextprotocol/sdk@^1.27.1":
+"@modelcontextprotocol/sdk@^1.27.1":
   version "1.27.1"
   resolved "https://registry.yarnpkg.com/@modelcontextprotocol/sdk/-/sdk-1.27.1.tgz#a602cf823bf8a68e13e7112f50aeb02b09fb83b9"
   integrity sha512-sr6GbP+4edBwFndLbM60gf07z0FQ79gaExpnsjMGePXqFcSSb7t6iscpjk9DhFhwd+mTEQrzNafGP8/iGGFYaA==
@@ -437,13 +437,6 @@ eventsource@^3.0.2:
   integrity sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==
   dependencies:
     eventsource-parser "^3.0.1"
-
-express-mcp-handler@^0.0.7:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/express-mcp-handler/-/express-mcp-handler-0.3.0.tgz#9856c80831c5899d76ec4af93f99c337a16b2981"
-  integrity sha512-C/73reJZKcRvuwwjPDPH3HzbY/gjaoxOcf/c6dcSEcvMHy8zxyUqTOmWj6fQMTIeaUVcw0yVEsqUKT2M6LpOag==
-  dependencies:
-    "@modelcontextprotocol/sdk" "^1.10.2"
 
 express-rate-limit@^8.2.1:
   version "8.3.1"

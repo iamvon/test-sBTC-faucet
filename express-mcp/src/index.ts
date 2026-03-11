@@ -1,6 +1,7 @@
-import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { statelessHandler } from "express-mcp-handler";
+import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type express from "express";
 import { z } from "zod";
 import {
   broadcastFaucetMint,
@@ -16,9 +17,9 @@ import {
   validateRecipient,
 } from "../../src/server/faucet.js";
 
-const app = express();
-
-app.use(express.json());
+const app = createMcpExpressApp({
+  host: "0.0.0.0",
+});
 
 async function getFaucetConfig() {
   const senderAddress = await getSenderAddress();
@@ -195,27 +196,53 @@ function createServer() {
   return server;
 }
 
-app.post(
-  "/api/mcp",
-  (req, _res, next) => {
-    console.log("[express-mcp] request", {
-      method: req.method,
-      url: req.originalUrl,
-      accept: req.headers.accept,
-      contentType: req.headers["content-type"],
-      mcpProtocolVersion: req.headers["mcp-protocol-version"],
-      mcpSessionId: req.headers["mcp-session-id"],
-      lastEventId: req.headers["last-event-id"],
-    });
-    next();
-  },
-  statelessHandler(createServer)
-);
-
-app.all("/api/mcp", (_req, res) => {
-  res.status(405).json({
-    error: "Use POST /api/mcp for MCP requests.",
+async function handleMcp(req: express.Request, res: express.Response) {
+  console.log("[express-mcp] request", {
+    method: req.method,
+    url: req.originalUrl,
+    accept: req.headers.accept,
+    contentType: req.headers["content-type"],
+    mcpProtocolVersion: req.headers["mcp-protocol-version"],
+    mcpSessionId: req.headers["mcp-session-id"],
+    lastEventId: req.headers["last-event-id"],
   });
+
+  const server = createServer();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+  });
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error("[express-mcp] handler error", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32603,
+          message: error instanceof Error ? error.message : "Internal MCP server error",
+        },
+        id: null,
+      });
+    }
+  }
+}
+
+app.post("/api/mcp", handleMcp);
+app.get("/api/mcp", handleMcp);
+app.delete("/api/mcp", handleMcp);
+
+app.options("/api/mcp", (_req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Last-Event-ID, mcp-protocol-version, mcp-session-id"
+  );
+  res.setHeader("Access-Control-Expose-Headers", "mcp-protocol-version, mcp-session-id");
+  res.status(204).end();
 });
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
