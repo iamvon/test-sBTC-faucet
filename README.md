@@ -1,6 +1,23 @@
 # test-sBTC Faucet
 
-Faucet UI for the `test-sbtc-faucet` Clarity contract in <a href="https://github.com/iamvon/test-sBTC-contract" target="_blank" rel="noreferrer">test-sBTC-contract</a>.
+A lightweight Stacks testnet faucet UI for requesting `test-sBTC` from the `test-sbtc-faucet` Clarity contract in <a href="https://github.com/iamvon/test-sBTC-contract" target="_blank" rel="noreferrer">test-sBTC-contract</a>.
+
+## Product Preview
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./docs/images/test-sbtc-faucet-light-mode.png" alt="test-sBTC Faucet in light mode" />
+      <br />
+      <sub>Light mode</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./docs/images/test-sbtc-faucet-dark-mode.png" alt="test-sBTC Faucet in dark mode" />
+      <br />
+      <sub>Dark mode</sub>
+    </td>
+  </tr>
+</table>
 
 ## Setup
 
