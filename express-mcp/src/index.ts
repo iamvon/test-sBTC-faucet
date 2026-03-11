@@ -15,7 +15,7 @@ import {
   parseUiAmount,
   requireEnv,
   validateRecipient,
-} from "../../src/server/faucet.js";
+} from "./faucet.js";
 
 const validateRecipientSchema = {
   recipient: z.string().min(1).describe("Stacks recipient address"),
