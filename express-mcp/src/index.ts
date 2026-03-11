@@ -114,6 +114,7 @@ function createServer() {
     name: "test-sbtc-faucet-express-mcp",
     version: "0.1.0",
   });
+  const unsafeServer = server as any;
 
   server.tool("get_faucet_config", async () => {
     try {
@@ -134,7 +135,7 @@ function createServer() {
     }
   });
 
-  server.tool(
+  unsafeServer.tool(
     "validate_recipient",
     validateRecipientSchema,
     async ({ recipient }: { recipient: string }) => {
@@ -157,7 +158,7 @@ function createServer() {
     }
   );
 
-  server.tool(
+  unsafeServer.tool(
     "get_testnet_sbtc_faucet",
     faucetClaimSchema,
     async ({ recipient, confirm }: { recipient: string; confirm: boolean }) => {
