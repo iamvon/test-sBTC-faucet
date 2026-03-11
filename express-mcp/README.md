@@ -4,14 +4,19 @@ This subproject is a dedicated Express-based MCP server for GitBook Assistant an
 
 ## Why this exists
 
-The Next.js `app/api` route version is a poor fit for long-lived MCP transport behavior on Vercel. This Express server follows Vercel's documented MCP + Express pattern instead.
+The Next.js `app/api` route version was a poor fit for GitBook's MCP handshake. This Express server works because it supports both:
+
+- modern Streamable HTTP MCP
+- legacy SSE-style MCP compatibility used by GitBook's GET-first client flow
 
 ## Endpoints
 
 - `GET /api/health`
 - `GET /api/faucet/config`
 - `POST /api/faucet/request`
+- `GET /api/mcp`
 - `POST /api/mcp`
+- `POST /api/mcp/messages?sessionId=...`
 
 ## MCP tools
 
@@ -54,6 +59,11 @@ yarn run dev
 4. Test the MCP endpoint:
 
 ```bash
+curl -i http://localhost:3000/api/mcp \
+  -H "Accept: text/event-stream"
+```
+
+```bash
 curl -X POST http://localhost:3000/api/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -62,10 +72,20 @@ curl -X POST http://localhost:3000/api/mcp \
 
 ## Vercel deployment
 
-Create a separate Vercel project for this folder and set the Root Directory to `express-mcp`.
+Create a separate project for this folder and set the Root Directory to `express-mcp`.
+
+Recommended runtimes:
+
+- Railway
+- Render
+- Fly.io
+
+Vercel may still be fragile for this MCP transport flow because GitBook opens long-lived GET/SSE requests first.
 
 After deploy, your MCP URL will be:
 
 ```text
 https://your-vercel-project.vercel.app/api/mcp
 ```
+
+For Railway or Render, replace the hostname with your deployed service URL.

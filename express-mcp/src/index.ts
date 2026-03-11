@@ -304,7 +304,12 @@ app.delete("/api/mcp", handleMcp);
 
 app.post("/api/mcp/messages", async (req, res) => {
   const sessionIdValue = req.query.sessionId;
-  const sessionId = Array.isArray(sessionIdValue) ? sessionIdValue[0] : sessionIdValue;
+  const sessionId =
+    typeof sessionIdValue === "string"
+      ? sessionIdValue
+      : Array.isArray(sessionIdValue) && typeof sessionIdValue[0] === "string"
+        ? sessionIdValue[0]
+        : undefined;
 
   console.log("[express-mcp] legacy message request", {
     method: req.method,
