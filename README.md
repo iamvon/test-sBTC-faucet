@@ -54,3 +54,7 @@ The UI and API routes run from the same Next.js app.
 - The faucet signer remains server-side in Next route handlers.
 - The API does a live read-only preflight before broadcasting.
 - Never expose the faucet mnemonic through `NEXT_PUBLIC_*` variables.
+
+## License
+
+MIT
