@@ -40,34 +40,13 @@ The UI and API routes run from the same Next.js app.
 
 ## MCP Server
 
-This app also exposes a stateless MCP endpoint at `/api/mcp`.
+The GitBook-compatible MCP server now lives in the dedicated Express subproject at [./express-mcp](./express-mcp).
 
-Available MCP tools:
+Use that server, not the main Next.js app, for GitBook Assistant or other hosted MCP clients.
 
-- `get_faucet_config`
-- `validate_recipient`
-- `get_testnet_sbtc_faucet`
+See [./express-mcp/README.md](./express-mcp/README.md) for setup and deployment.
 
-The `get_testnet_sbtc_faucet` tool is intentionally gated and only succeeds when the client sends:
-
-- `recipient`: a valid Stacks address
-- `confirm`: `true`
-
-Local test URL:
-
-```text
-http://localhost:3000/api/mcp
-```
-
-For GitBook, add this endpoint under the site or space `AI & MCP` settings as an external MCP server after the faucet app is deployed on a public HTTPS URL.
-
-Example production URL:
-
-```text
-https://your-faucet-app.example.com/api/mcp
-```
-
-Important: the faucet currently has no rate limit or CAPTCHA. Do not expose `request_test_sbtc` publicly without abuse controls.
+Important: the faucet currently has no rate limit or CAPTCHA. Do not expose the MCP faucet tool publicly without abuse controls.
 
 ## Environment
 
