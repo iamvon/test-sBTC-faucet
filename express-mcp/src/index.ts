@@ -201,12 +201,6 @@ function createServer() {
   return server;
 }
 
-const sharedServer = createServer();
-const sharedTransport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: undefined,
-});
-let sharedServerConnected = false;
-
 async function handleMcp(req: express.Request, res: express.Response) {
   console.log("[express-mcp] request", {
     method: req.method,
@@ -218,13 +212,23 @@ async function handleMcp(req: express.Request, res: express.Response) {
     lastEventId: req.headers["last-event-id"],
   });
 
-  try {
-    if (!sharedServerConnected) {
-      await sharedServer.connect(sharedTransport);
-      sharedServerConnected = true;
-    }
+  const server = createServer();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+  });
 
-    await sharedTransport.handleRequest(req, res, req.body);
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+
+    res.on("close", () => {
+      void transport.close().catch(error => {
+        console.error("[express-mcp] failed to close transport", error);
+      });
+      void server.close().catch(error => {
+        console.error("[express-mcp] failed to close server", error);
+      });
+    });
   } catch (error) {
     console.error("[express-mcp] handler error", error);
     if (!res.headersSent) {
