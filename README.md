@@ -38,6 +38,32 @@ npm run dev
 
 The UI and API routes run from the same Next.js app.
 
+## MCP Server
+
+This app also exposes a stateless MCP endpoint at `/api/mcp`.
+
+Available MCP tools:
+
+- `get_faucet_config`
+- `validate_recipient`
+- `request_test_sbtc`
+
+Local test URL:
+
+```text
+http://localhost:3000/api/mcp
+```
+
+For GitBook, add this endpoint under the site or space `AI & MCP` settings as an external MCP server after the faucet app is deployed on a public HTTPS URL.
+
+Example production URL:
+
+```text
+https://your-faucet-app.example.com/api/mcp
+```
+
+Important: the faucet currently has no rate limit or CAPTCHA. Do not expose `request_test_sbtc` publicly without abuse controls.
+
 ## Environment
 
 - `STACKS_NETWORK`: `testnet` or `mainnet`
