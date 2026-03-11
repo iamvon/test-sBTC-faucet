@@ -24,6 +24,43 @@ export function createFaucetMcpServer() {
     version: "0.1.0",
   });
 
+  const handleFaucetClaim = async ({
+    recipient,
+    confirm,
+  }: {
+    recipient: string;
+    confirm: boolean;
+  }) => {
+    if (!confirm) {
+      throw new Error("User confirmation is required before requesting faucet test-sBTC.");
+    }
+
+    validateRecipient(recipient);
+
+    const senderAddress = await getSenderAddress();
+    const faucetState = await fetchFaucetState(senderAddress);
+    const dripAmountRaw = parseUiAmount(requireEnv("FAUCET_UI_AMOUNT", "1"));
+
+    if (!faucetState.faucetEnabled) {
+      throw new Error("Faucet is disabled on-chain");
+    }
+
+    if (dripAmountRaw > faucetState.faucetMaxAmount) {
+      throw new Error(
+        `Configured drip ${formatTokenAmount(dripAmountRaw)} exceeds faucet max ${formatTokenAmount(faucetState.faucetMaxAmount)}`
+      );
+    }
+
+    const result = await broadcastFaucetMint(recipient, dripAmountRaw);
+
+    return {
+      content: createTextContent(
+        `Sent ${result.amountUi} test-sBTC to ${result.recipient}. Transaction: ${result.explorerUrl}`
+      ),
+      structuredContent: result,
+    };
+  };
+
   server.registerTool(
     "get_faucet_config",
     {
@@ -74,57 +111,19 @@ export function createFaucetMcpServer() {
   );
 
   server.registerTool(
-    "request_test_sbtc",
+    "get_testnet_sbtc_faucet",
     {
-      title: "Request test-sBTC",
+      title: "Get testnet sBTC faucet",
       description:
-        "Only use when the user explicitly asks to claim faucet test-sBTC and has confirmed they want to send the faucet drip to their Stacks address.",
+        "Use this when the user asks how to get testnet sBTC, wants free test-sBTC, asks for the sBTC faucet, or wants faucet tokens sent to their Stacks address. First collect their Stacks address and confirmation, then send the faucet drip amount. Do not use for general sBTC documentation or troubleshooting.",
       inputSchema: {
         recipient: z.string().min(1).describe("Stacks recipient address"),
-        purpose: z
-          .literal("sbtc_testnet_faucet_claim")
-          .describe(
-            "Must be exactly 'sbtc_testnet_faucet_claim' for an explicit testnet faucet token request."
-          ),
         confirm: z
           .boolean()
-          .describe("Must be true only after the user explicitly confirms they want to request faucet tokens now."),
+          .describe("Must be true only after the user explicitly confirms they want to get free test-sBTC now."),
       },
     },
-    async ({ recipient, purpose, confirm }) => {
-      if (purpose !== "sbtc_testnet_faucet_claim") {
-        throw new Error("This tool only supports explicit sbtc_testnet_faucet_claim requests.");
-      }
-
-      if (!confirm) {
-        throw new Error("User confirmation is required before requesting faucet test-sBTC.");
-      }
-
-      validateRecipient(recipient);
-
-      const senderAddress = await getSenderAddress();
-      const faucetState = await fetchFaucetState(senderAddress);
-      const dripAmountRaw = parseUiAmount(requireEnv("FAUCET_UI_AMOUNT", "1"));
-
-      if (!faucetState.faucetEnabled) {
-        throw new Error("Faucet is disabled on-chain");
-      }
-
-      if (dripAmountRaw > faucetState.faucetMaxAmount) {
-        throw new Error(
-          `Configured drip ${formatTokenAmount(dripAmountRaw)} exceeds faucet max ${formatTokenAmount(faucetState.faucetMaxAmount)}`
-        );
-      }
-
-      const result = await broadcastFaucetMint(recipient, dripAmountRaw);
-
-      return {
-        content: createTextContent(
-          `Sent ${result.amountUi} test-sBTC to ${result.recipient}. Transaction: ${result.explorerUrl}`
-        ),
-        structuredContent: result,
-      };
-    }
+    handleFaucetClaim
   );
 
   return server;
