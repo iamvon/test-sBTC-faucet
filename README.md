@@ -19,6 +19,12 @@ A lightweight Stacks testnet faucet UI for requesting `test-sBTC` from the `test
   </tr>
 </table>
 
+## GitBook AI Assistant sBTC Faucet MCP Demo
+
+https://github.com/user-attachments/assets/40648538-b476-4dc1-91f0-8715db5dd410
+
+GitBook AI Assistant using the sBTC Faucet MCP server to help Stacks builders discover the faucet, validate a testnet address, and request test-sBTC directly from the docs experience.
+
 ## Setup
 
 1. Use Node `18.18+` or Node `20`
