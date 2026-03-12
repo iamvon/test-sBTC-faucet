@@ -20,6 +20,7 @@ The Next.js `app/api` route version was a poor fit for GitBook's MCP handshake. 
 
 ## MCP tools
 
+- `get_testnet_sbtc_help`
 - `get_faucet_config`
 - `validate_recipient`
 - `get_testnet_sbtc_faucet`
